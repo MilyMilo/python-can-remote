@@ -15,9 +15,23 @@ Install using pip::
 Usage
 -----
 
-Start server from command line::
+Basic CLI with a single bus::
 
-    $ python -m can_remote --interface=virtual --channel=0 --bitrate=500000
+    $ python3 -m can_remote
+
+Will create a bus at root directory, bound to channel 0
+
+To do more advanced customization of routes import the RemoteServer:
+
+.. code-block:: python
+
+    from can_remote.server import RemoteServer
+
+    routes = {
+        "/": 0,
+    }
+
+    RemoteServer(host="0.0.0.0", port=DEFAULT_PORT, routes=routes, bustype="virtual").serve_forever()
 
 
 Create python-can bus:
