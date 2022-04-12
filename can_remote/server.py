@@ -33,12 +33,14 @@ class RemoteServer(ThreadingMixIn, HTTPServer):
 
     daemon_threads = True
 
-    def __init__(self, host='0.0.0.0', port=DEFAULT_PORT, ssl_context=None, **config):
+    def __init__(self, host='0.0.0.0', port=DEFAULT_PORT, routes=None, ssl_context=None, **config):
         """
         :param str host:
             Address to listen to.
         :param int port:
             Network port to listen to.
+        :param dict routes:
+            Dict of {"/route": channel} mapping for using different depending on route
         :param ssl.SSLContext ssl_context:
             An SSL context to use for creating a secure WSS server.
         :param channel:
@@ -50,6 +52,9 @@ class RemoteServer(ThreadingMixIn, HTTPServer):
         """
         address = (host, port)
         self.config = config
+        if not routes:
+            raise RemoteServerError("Routes mapping has not been provided!")
+        self.routes = routes
         #: List of :class:`can.interfaces.remote.server.ClientRequestHandler`
         #: instances
         self.clients = []
@@ -60,10 +65,11 @@ class RemoteServer(ThreadingMixIn, HTTPServer):
             scheme_suffix = "s"
         else:
             scheme_suffix = ""
-        logger.info("Connect using channel 'ws%s://localhost:%d/'",
-                    scheme_suffix, self.server_port)
         logger.info("Open browser to 'http%s://localhost:%d/'",
                     scheme_suffix, self.server_port)
+        logger.info("Registered endpoints:")
+        for endpoint, channel in self.routes.items():
+            logger.info("Channel %d: 'ws%s://localhost:%d%s'", channel, scheme_suffix, self.server_port, endpoint, )
 
 
 class ClientRequestHandler(BaseHTTPRequestHandler):
@@ -80,7 +86,16 @@ class ClientRequestHandler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         if self.headers.get("Upgrade", "").lower() == "websocket":
+            channel = self.server.routes.get(self.path)
+            logger.debug(f'do_GET(): {self.path} {channel}')
+
+            if channel is None:
+                self.send_response(404, "Underlying bus is unavailable.")
+                return
+
+            self.server.config["channel"] = channel
             self.start_websocket()
+
         else:
             self.send_trace_webpage()
 
@@ -106,7 +121,11 @@ class ClientRequestHandler(BaseHTTPRequestHandler):
         self.server.clients.remove(protocol)
 
     def send_trace_webpage(self):
-        path = os.path.dirname(__file__) + "/web" + self.path
+        resource_path = self.path
+        for prefix in self.server.routes.keys():
+            resource_path = resource_path.replace(prefix, '/')
+
+        path = os.path.dirname(__file__) + "/web" + resource_path
         if path.endswith("/"):
             path = path + "index.html"
         # Prefer compressed files
@@ -213,4 +232,4 @@ class RemoteServerError(Exception):
 
 
 if __name__ == "__main__":
-    RemoteServer(channel=0, bustype="virtual").serve_forever()
+    RemoteServer(routes={"/": 0}, bustype="virtual").serve_forever()

@@ -1,10 +1,9 @@
 import Vue from 'vue'
-import Bus from 'python-can-remote'
+import Bus from 'python-can-remote-ts/dist/python-can-remote.es'
 import throttle from 'lodash/throttle'
 
 import 'bootstrap/dist/css/bootstrap.css'
 import './style.css'
-
 
 function onConnect(bus) {
     // Do some experimentation here
@@ -19,13 +18,7 @@ function onConnect(bus) {
         arbitration_id: 0x123,
         data: [0xff, 0xfe, 0xfd]
     }, 0.005);
-/*
-    bus.send({
-        arbitration_id: 0x123,
-        extended_id: false,
-        data: [0x100, 0xfe, 0xfd]
-    });
-*/
+
     bus.send({
         arbitration_id: 0x6ef,
         is_extended_id: false,

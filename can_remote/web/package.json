@@ -11,7 +11,7 @@
   "dependencies": {
     "bootstrap": "^3.3.7",
     "lodash": "^4.17.11",
-    "python-can-remote": "^0.3.0",
+    "python-can-remote-ts": "^0.0.3",
     "vue": "^2.6.10"
   },
   "devDependencies": {
